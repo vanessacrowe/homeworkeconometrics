@@ -1,7 +1,7 @@
 ---
 title: "Lab 4 - HW 5 Econometrics"
 author: Vanessa Crowe, Luis Melo, Mishal Nawaz
-output: html_document
+output: R Markdown
 date: "2023-10-05"
 ---
 
@@ -9,22 +9,21 @@ date: "2023-10-05"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Regression Modelingby Wages in R
+## Regression Modeling by Wages in R
 
 For this lab we will be looking into people at prime age in the labor force who work fulltime, year round according to NYs ACS data from 2017. We will call this subset "data_use"
 
-
 ```{r}
-load("Desktop/Econometrics R Projects/acs2017_ny_data.RData")
-
-use_var <- (acs2017_ny$AGE >= 25) & (acs2017_ny$AGE <= 55) & (acs2017_ny$LABFORCE == 2) & (acs2017_ny$WKSWORK2 > 4) & (acs2017_ny$UHRSWORK >= 35)
-data_use <- subset(acs2017_ny,use_var) 
+load("~/Desktop/Econometrics R Projects/acs2017_ny_data.RData")
+use_varb <- (acs2017_ny$AGE >= 25) & (acs2017_ny$AGE <= 55) & (acs2017_ny$LABFORCE == 2) & (acs2017_ny$WKSWORK2 > 4) & (acs2017_ny$UHRSWORK >= 35)
+dat_use <- subset(acs2017_ny,use_varb)
+summary(dat_use)
 ```
 
 We then model this subset into a Linear regression of Income Wage against Age with additional arguments of race and education
 
 ```{r}
-model_temp1 <- lm(INCWAGE ~ AGE + AfAm + Asian + Amindian + race_oth + Hispanic + educ_hs + educ_somecoll + educ_college + educ_advdeg, data = data_use)
+model_temp1 <- lm(INCWAGE ~ AGE + AfAm + Asian + Amindian + race_oth + Hispanic + educ_hs + educ_somecoll + educ_college + educ_advdeg, data = dat_use)
 
 require(stargazer)
 stargazer(model_temp1, type = "text")
@@ -41,10 +40,10 @@ There were also a set of outliers with significantly high income that is off the
 ```{r}
 require(AER)
 
-NNobs <- length(data_use$INCWAGE)
+NNobs <- length(dat_use$INCWAGE)
 set.seed(12345) 
 graph_obs <- (runif(NNobs) < 0.1) 
-dat_graph <-subset(data_use,graph_obs)  
+dat_graph <-subset(dat_use,graph_obs)  
 
 plot(INCWAGE ~ jitter(AGE, factor = 1), pch = 16, col = rgb(0.5, 0.5, 0.5, alpha = 0.2), ylim = c(0,150000), data = dat_graph)
 title(main = "Income Salary by Age", col.main = "blue")
@@ -63,3 +62,4 @@ This line shows that the values of income range between about 49099 and 88373, s
 ```{r}
 summary(to_be_predicted2$yhat)
 ```
+
