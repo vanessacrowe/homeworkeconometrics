@@ -1,0 +1,188 @@
+---
+title: "2023 exam 1 review"
+output:
+  html_document: default
+  pdf_document: default
+date: "2023-10-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+
+```{r }
+load("~/Desktop/Econometrics R Projects/acs2021_ny_data.RData")
+```
+
+## Question 1
+estimate, standard error, t-stat and a p-value for each hypothesis test and a confidence interval
+explaining each test (carefully noting what is the null hypothesis) and explaining the results of that test along with what assumptions are needed for the test to be valid.
+#Null hypothesis: no relationship between higher than a bachelors or not when considering working from home
+5% level
+
+
+##
+Find estimate using mean since median and mode would not be good methods due to the type of data
+
+#remote ba vs remote no BA
+```{r}
+data <- c(14056, 4870)
+estimate <-  mean(data)
+print(estimate)
+stderror <- sd(data)/sqrt(length((data)))
+print(stderror)
+tstat <- estimate/stderror
+print(tstat)
+confintmin <- 1.96*4593 - 9463
+confintmax <- 1.96*4583 + 9463
+print(confintmin)
+print(confintmax)
+p_value=pt(q=2.060309, df=1, lower.tail=FALSE)
+print(p_value)
+```
+##
+we should not reject the null hypothesis
+##
+ no remote ba vs no remote no ba
+```{r}
+data2 <- c(15973, 20336)
+estimate2 <-  mean(data2)
+print(estimate2)
+stderror2 <- sd(data2)/sqrt(length((data2)))
+print(stderror2)
+tstat2 <- estimate2/stderror2
+print(tstat2)
+confintmin2 <- 1.96*2181.5 - 18154.5
+confintmax2 <- 1.96*2181.5 + 18154.5
+print(confintmin2)
+print(confintmax2)
+p_value2=pt(q=8.322026, df=1, lower.tail=FALSE)
+print(p_value2)
+```
+Based on the first analysis of individuals who work remotely with or without bachelor degrees, the estimate suggests that those with a degree gave an estimated difference of 9463 more than those without. The standard error being 4593 may mean that the estimate may not be accurate. Based on the p value and t stat, the difference between the two groups does not seem to be  statistically significant. On the other hand, those with a bachelor degree or not who work offline has a much alrger difference between them compared to the remote working group. The smaller standard error shows that the estimate is mure precise and the p value and t stat shows that the difference is statistically significant and that we should reject the null hypothesis. In the first analysis, the mean may not be the best way to estimate the relationship between those grous which couldve altered the outputs to show there was a relationship but it may not have been statistically significant.
+
+#Question 2
+Northeest vs Midwest vs South vs West
+do regions and education  have an effect on people chosing to vaccinate their kids?
+Null hypothesis: no difference between chosing to vaccinate or not based on edu level or region
+assume observations are independent of each other and that the odds of choosing an option is linear
+
+```{r}
+VaxChoiceRegion <- data.frame(
+  REGION = c("Northeast", "Northeast", "Northeast", "Midwest", "Midwest", "Midwest", "South", "South", "South", "West", "West", "West"),
+  kids_vax1 = c("Y", "N", "maybe", "Y", "N", "maybe", "Y", "N", "maybe", "Y", "N", "maybe"),
+  BAplus = c(42, 104, 189, 53, 180, 271, 77, 258, 388, 73, 228, 340),
+  no = c(35, 118, 128, 30, 288, 255, 45, 380, 388, 41, 311, 328)
+)
+
+# create table
+table2 <- xtabs(cbind(BAplus, no) ~ REGION + kids_vax1, data = VaxChoiceRegion)
+table2
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+#data frame
+VaxChoiceRegion1 <- data.frame(
+  REGION = rep(c("Midwest", "Northeast", "South", "West"), each = 3),
+  kids_vax1 = rep(c("maybe", "N", "Y"), times = 4),
+  counts = c(271, 180, 53, 189, 104, 42, 388, 258, 77, 340, 228, 73, 255, 288, 30, 128, 118, 35, 388, 380, 45, 328, 311, 41)
+)
+
+# Reshape the data into long format using dplyr
+VaxChoiceRegion12 <- VaxChoiceRegion1 %>%
+  pivot_longer(-c(REGION, kids_vax1), names_to = "kids_vax2", values_to = "counts")
+
+# Fit linear regression using lm()
+model <- lm(counts ~ REGION * kids_vax1, data = VaxChoiceRegion12)
+summary(model)
+t_testresult <- summary(model)
+t_testresult
+```
+##
+
+Multiplying kids get vaxxed and the region to show the interaction between them. The positive coefficient on northeast kids suggests that the interaction between kids vaxxed and region increases by 101.50. The negative coefficient shows that it decreases, for example the relationship between the souther region ad vaccinated kids decreases the outcome by 105.50. The p values for Northeast and South are considered low which could mean they are statistically significant while other regions with a less drastic interaction effect have larger p values.
+
+
+# Question 3
+In a regression where the dependent variable is the price of gasoline and the independent variable is the price of crude. Estimate that the coefficient is 1.20138 and standard error is 0.01577. What is the t statictic and the pvalue of a test whether the coefficient equals 1.
+Tvalue: estimated coefficient - 1(hypothesis) / std error - 1.20138 - 1/.01577 = 12.7681611
+pvalue: .006078
+
+
+# Question 4
+
+Studying how much income varies for women with an advanced degree who are unmarried in the social sciences sector
+I thought this was an interesting topic to explore because I wanted to see if it was really true that women with higher degrees especially in social sciences are more likely to be unmarried and if income is a factor of that
+
+```{r}
+library(forcats)
+library(haven)
+use_varb <- 
+  (acs2021$AGE >= 25) & 
+  (acs2021$AGE <= 60) & 
+  (as.numeric(as_factor(acs2021$LABFORCE)) == 2) & 
+  (acs2021$WKSWORK2 > 4) & 
+  (acs2021$UHRSWORK >= 35) & 
+  (acs2021$DEGFIELD == 'Social Sciences') & 
+  (as.numeric(as_factor(acs2021$educ_advdeg)) == 1) & 
+  (as.numeric(as_factor(acs2021$female)) == 1)
+
+data_use <- subset(acs2021,use_varb) 
+```
+
+```{r}
+model_temp1 <- lm(INCWAGE ~ AGE + unmarried + AfAm + Asian + Amindian + race_oth + white + Hispanic, data = data_use)
+summary(model_temp1)
+
+require(stargazer)
+stargazer(model_temp1, type = "text")
+```
+The coefficient suggests that being unmarried is associated with a decrease in INCWAGE specifically -10253.7 lower. Since the standard error shows there may be some variability around the result, I wondered if it is because unmarried women may have a smaller family size therefore, they would not need to make more money
+
+
+```{r}
+model_temp2 <- lm(INCWAGE ~ AGE + unmarried + AfAm + Asian + Amindian + race_oth + white + Hispanic + FAMSIZE, data = data_use)
+summary(model_temp2)
+
+require(stargazer)
+stargazer(model_temp2, type = "text")
+```
+
+According to the result, it appears that income is likely to increase by 8086.7 for every increase in family size could be a factor to why unmarried women are reporting lower income. The next step would be to test the family size difference between women who are married and those who are unmarried.
+
+```{r}
+use_varb1 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 60) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$DEGFIELD == 'Social Sciences') & (acs2021$educ_advdeg == 1) & (acs2021$female == 1) & (acs2021$FAMSIZE >= 1) & (acs2021$unmarried == 1)
+
+use_varb2 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 60) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$DEGFIELD == 'Social Sciences') & (acs2021$educ_advdeg == 1) & (acs2021$female == 1) & (acs2021$unmarried == 1)
+
+use_varb3 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 60) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$DEGFIELD == 'Social Sciences') & (acs2021$educ_advdeg == 1) & (acs2021$female == 1) & (acs2021$unmarried == 0) & (acs2021$FAMSIZE >= 1)
+```
+
+```{r}
+table(use_varb1)
+table(use_varb2)
+table(use_varb3)
+```
+
+
+To test my hypothesis, I counted the amount of unmarried women in social science with an advance degree between 25:60 in those working conditions vs the unmarried women in social science with an advance degree between 25:60 with a family size less than 1 vs a family size greater than 1 of married women with the same conditions. 279 more married women reported their family size to be larger than 1 while the two groups with unmarried women had no numerical differences which could be because unmarried women have smaller family size which is seen in model_temp3 where it indicates that as the size of a family increases, the likelihood of being unmarried decreases.
+
+```{r}
+use_varb4 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 60) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$DEGFIELD == 'Social Sciences') & (acs2021$educ_advdeg == 1) & (acs2021$female == 1)
+data_use2 <- subset(acs2021,use_varb4) 
+```
+
+```{r}
+model_temp3 <- lm(unmarried ~ INCWAGE + AGE + FAMSIZE + AfAm + Asian + Amindian + race_oth + white + Hispanic, data = data_use2)
+summary(model_temp3)
+
+require(stargazer)
+stargazer(model_temp3, type = "text")
+```
+
+
