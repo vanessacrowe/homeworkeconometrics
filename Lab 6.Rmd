@@ -1,0 +1,189 @@
+---
+title: "Lab 6"
+output: html_document
+members: Vanessa C., Alana K., Mishal N.
+date: "2023-10-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R
+Compare races, education levels, age and working hours. etc
+
+Hypothesis : female labor force participation and choices to work in the public sector/jobs that are more stable
+
+## downloading files and turning csv in to assign a name to the file
+```{r }
+require(plyr)
+require(dplyr)
+require(tidyverse)
+require(haven)
+
+load("/Users/vanessacrowe/Desktop/Econometrics R Projects/acs2021_ny_data.RData")
+levels_n <- read.csv("IND_levels.csv")
+names(levels_n) <- c("New_Level","levels_orig")
+acs2021$IND <- as.factor(acs2021$IND)
+levels_orig <- levels(acs2021$IND) 
+levels_new <- join(data.frame(levels_orig),data.frame(levels_n))
+
+acs2021$public_work <- acs2021$IND 
+levels_public <- read.csv("publicwork_recode.csv")
+names(levels_public) <- c("levels_orig","New_Level")
+levels_new_pub <- join(data.frame(levels_orig),data.frame(levels_public))
+
+
+levels(acs2021$IND) <- levels_new$New_Level
+levels(acs2021$public_work) <- levels_new_pub$New_Level
+
+```
+
+##
+
+create numeric variable for the lm by attaching it to the data 
+
+```{r}
+acs2021$public_work_num <- as.numeric(acs2021$public_work == "work for public, stable")
+```
+
+#
+assigning a name to the numerical variable
+```{r}
+public_work_num <- as.numeric(acs2021$public_work == "work for public, stable")
+```
+
+#
+illustrate in table to see the difference between those who work publically vs those who do not(private work)
+```{r}
+table1 <- table(acs2021$public_work,acs2021$public_work_num)
+table1
+
+```
+Create a subset of only the 36,265 public sector workers to analyze the different variables
+
+```{r}
+use_variable <- (acs2021$public_work == "work for public, stable")
+data_use <- subset(acs2021,use_variable)
+data_use
+```
+
+
+Subsetting to include the public service workers only with these factors now the amount of public sector workers between 25 and 55 who works with the following hours are 14, 966
+```{r}
+forpublic1 <- (data_use$AGE >= 25) & (data_use$AGE <= 55) & (data_use$LABFORCE == 2) & (data_use$WKSWORK2 > 4) & (data_use$UHRSWORK >= 35)
+data_use2 <- subset(data_use, forpublic1)
+summary(data_use2)
+data_use2
+```
+
+Running the lm
+The result seem to show that none of the variables have a statistically significant relationship to working publically. Being female and ones education level, has high o values and low t values suggests that there is not enough evidence to reject the null hypothesis. The stats of the age variable suggests that as age increases, you may hav a negative relationship with public work.
+
+keep in mind this is focused on workers in the public sectors with certain labor conditions compared to all public workers
+```{r}
+ols_out1 <- lm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use2)
+summary(ols_out1)
+```
+Using the same conditions to view data in the private sector
+
+```{r}
+acs2021$priv <- as.numeric(acs2021$public_work == "n")
+```
+
+```{r}
+acs2021$private_work_num <- as.numeric(acs2021$public_work == "n")
+```
+
+Demonstrates the 83236 that shows those who do not work in the public sector
+```{r}
+table2 <- table(acs2021$priv, acs2021$private_work_num)
+table2
+```
+With those working conditions, the data was reduced to 43,242
+```{r}
+forpriv1 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 55) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35)
+data_use3 <- subset(acs2021, forpriv1)
+summary(data_use3)
+data_use3
+```
+#
+
+Although the public work suggested there was no statistically significant relationship between females and public work, this does suggest that being female is associated with a decrease in private work with a statistically significant p value and an absolute large t value.
+```{r}
+ols_out2 <- lm(private_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use3)
+summary(ols_out2)
+```
+
+Overall the data suggests that women are less likely to work in private sectors but does not suggest they are more likely to work in the public sector. 
+
+
+Analyzing the same thing but adding hispanic individuals in the subset
+
+
+```{r}
+forpublic2 <- (data_use$AGE >= 25) & (data_use$AGE <= 55) & (data_use$LABFORCE == 2) & (data_use$WKSWORK2 > 4) & (data_use$UHRSWORK >= 35) & (data_use$Hispanic == 1) 
+data_use3 <- subset(data_use, forpublic2)
+summary(data_use3)
+data_use3
+```
+
+This suggests that there is a small positive effect on public work as a hispanic female however it does not appear to have a significant likelihood on being involved in public work
+
+```{r}
+ols_out3 <- lm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use3)
+summary(ols_out3)
+```
+
+Hispanic women who do private work reduced to 5,762
+
+```{r}
+forpriv2 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 55) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$Hispanic == 1)
+data_use4 <- subset(acs2021, forpriv2)
+summary(data_use4)
+data_use4
+```
+
+Private work and Hispanic women
+This suggests that being a hispanic female is associated with a decrease in private work suggesting they may be less involved in private work
+
+```{r}
+ols_out4 <- lm(private_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use4)
+summary(ols_out4)
+```
+The coefficient estimate for hispanic females working in the public sector is 7.505e-16 indicating a small positive effect on public work with p values and t values suggesting the value is not statistically significant while the coefficient for private work is -0.1306231 siggesting the negative effect on private work with high t values and a  significant p value.
+
+
+Focusing on white women in the public sector to compare to hispanic women
+
+```{r}
+whitewomen <- (data_use$AGE >= 25) & (data_use$AGE <= 55) & (data_use$LABFORCE == 2) & (data_use$WKSWORK2 > 4) & (data_use$UHRSWORK >= 35) & (data_use$white == 1) 
+dat_use1 <- subset(data_use, whitewomen)
+summary(dat_use1)
+dat_use1
+```
+
+
+```{r}
+ols_out5 <- lm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  dat_use1)
+summary(ols_out5)
+```
+
+Although the coefficients for both hispanic and white females show a slight positive effect on public work but white females have a much smaller value
+
+
+WHite women in the private sector
+```{r}
+whitewomen2 <- (acs2021$AGE >= 25) & (acs2021$AGE <= 55) & (acs2021$LABFORCE == 2) & (acs2021$WKSWORK2 > 4) & (acs2021$UHRSWORK >= 35) & (acs2021$white == 1)
+dat_use2 <- subset(acs2021, whitewomen2)
+summary(dat_use2)
+dat_use2
+```
+
+
+```{r}
+ols_out6 <- lm(private_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  dat_use2)
+summary(ols_out6)
+```
+Since the data showed more statistical significance among private work for women. I decided to look at the values of white females vs hispanic females for private work. The coefficient for hispanic women was -.1451074 and for white women was -.1306231 showing that hispanic women are more likely to be associagted with a decrease in private work compared to white women.
+
