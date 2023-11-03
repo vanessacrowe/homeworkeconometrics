@@ -1,0 +1,228 @@
+---
+title: "Lab 7"
+output: html_document
+Names: Vanessa C. Alana K. Mishal N.
+date: "2023-10-26"
+---
+
+from lab 6
+```{r }
+require(plyr)
+require(dplyr)
+require(tidyverse)
+require(haven)
+
+load("/Users/vanessacrowe/Desktop/Econometrics R Projects/acs2021_ny_data.RData")
+levels_n <- read.csv("IND_levels.csv")
+names(levels_n) <- c("New_Level","levels_orig")
+acs2021$IND <- as.factor(acs2021$IND)
+levels_orig <- levels(acs2021$IND) 
+levels_new <- join(data.frame(levels_orig),data.frame(levels_n))
+
+acs2021$public_work <- acs2021$IND 
+levels_public <- read.csv("publicwork_recode.csv")
+names(levels_public) <- c("levels_orig","New_Level")
+levels_new_pub <- join(data.frame(levels_orig),data.frame(levels_public))
+
+
+levels(acs2021$IND) <- levels_new$New_Level
+levels(acs2021$public_work) <- levels_new_pub$New_Level
+
+```
+
+
+```{r}
+acs2021$public_work_num <- as.numeric(acs2021$public_work == "work for public, stable")
+```
+
+#
+assigning a name to the numerical variable
+```{r}
+public_work_num <- as.numeric(acs2021$public_work == "work for public, stable")
+```
+
+
+```{r}
+use_variable <- (acs2021$public_work == "work for public, stable")
+data_use <- subset(acs2021,use_variable)
+data_use
+```
+
+```{r}
+forpublic1 <- (data_use$AGE >= 25) & (data_use$AGE <= 55) & (data_use$LABFORCE == 2) & (data_use$WKSWORK2 > 4) & (data_use$UHRSWORK >= 35)
+data_use2 <- subset(data_use, forpublic1)
+summary(data_use2)
+data_use2
+```
+
+
+```{r}
+ols_out1 <- lm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use2)
+summary(ols_out1)
+```
+
+
+
+
+```{r}
+
+# hispanic women in public sector, this model demonstrates that they are more likely to work in the public sector based on the coefficient of 7 shown. Hispanic people overall show more statistical significants that they are more likely to work i the public sector regardless of education degree while age shows a negative correlation between public service work and being hispanic. As shown in lab 6, females overall have a positive relationship with the public sector but the higher coefficient in the data with hispanic women shows hispanic women are more likely compared to other women in the same demographucs regarding age range and working time.
+
+ols_out2 <- lm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  data_use2)
+summary(ols_out2)
+
+pred_vals_ols2 <- predict(ols_out2, data_use2)
+pred_model_ols2 <- (pred_vals_ols2 > mean(pred_vals_ols2))
+table(pred = pred_model_ols2, true = data_use2$public_work_num)
+
+```
+
+
+```{r}
+
+#using the full data set to predict the probabilities among public working and the independent variables across the whole data set.This is placing the data into binary outcomes based on the probability threshold of .5. The statistical data for female shows that being female is associated with a statistical increase in the odds of being a public sector worker even accounting for all the variables in the model.
+
+# logit
+model_logit3 <- glm(public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE, data =  acs2021, family = binomial
+                    )
+summary(model_logit3)
+pred_vals <- predict(model_logit3, acs2021, type = "response")
+pred_model_logit3 <- (pred_vals > 0.5)
+table(pred = pred_model_logit3, true = acs2021$public_work_num)
+
+```
+# fix each variable you want in your regression
+# this example is for small version, 
+# public_work_num ~ female + educ_hs + educ_somecoll + educ_college + educ_advdeg + AGE + PUMA_factor
+
+# I want to demonstrate how to work with more complicated factors so I will also include PUMA
+
+```{r eval = FALSE}
+
+#standarize  data so x variables have values between 0 and 1.
+#each PUMA number codes a 'neighborhood' -- although the size of that neighborhood is trying to enclose a roughly equal number of people. Dense areas in NYC get small geographic areas but upstate, where people are sparse, the PUMAs can be large geographic areas. FYI, 4-digit codes starting with 37 are Bronx, 38 Manhattan, 39 SI, 40 Brooklyn and 41 Queens. You can find the codes if you'd like. But here I'll just leave the code number.
+
+#converting puma as a factor
+data_use3$PUMA_factor <- as.factor(data_use3$PUMA)
+
+#creating dummy variables for 'public_work_num', 'female', 'educ_hs', 'educ_somecoll', 'educ_college', 'educ_advdeg', 'AGE', and 'PUMA_factor' based on the hispanic individuals between 25 and 55 with these workig conditions: (data_use$AGE >= 25) & (data_use$AGE <= 55) & (data_use$LABFORCE == 2) & (data_use$WKSWORK2 > 4) & (data_use$UHRSWORK >= 35)
+
+d_pub_work <- data.frame(model.matrix(~ data_use3$public_work_num)) 
+
+d_female <- data.frame(model.matrix(~ data_use3$female))
+d_educ_hs <- data.frame(model.matrix(~ data_use3$educ_hs))
+d_educ_somecoll <- data.frame(model.matrix(~ data_use3$educ_somecoll))
+d_educ_college <- data.frame(model.matrix(~ data_use3$educ_college))
+d_educ_advdeg <- data.frame(model.matrix(~ data_use3$educ_advdeg))
+d_age <- data.frame(model.matrix(~ data_use3$AGE))
+d_PUMA <- data.frame(model.matrix(~ data_use3$PUMA_factor)) 
+
+```
+
+
+
+```{r eval = FALSE}
+#verify empty columns ; no empty columns
+
+sum( colSums(d_PUMA) == 0) # should be zero
+```
+
+```{r eval=FALSE}
+
+dat_for_analysis_sub <- data.frame(
+  d_pub_work[,2], # need [] since model.matrix includes intercept term
+  d_female[,2],
+  d_educ_hs[,2],
+  d_educ_somecoll[,2],
+  d_educ_college[,2],
+  d_educ_advdeg[,2],
+  d_age[,2],
+  d_PUMA[,2:142] ) # this last term is why model.matrix : change to fit our data
+
+```
+
+
+
+```{r}
+
+#dropping repetition of data_use3
+names(dat_for_analysis_sub)
+names(dat_for_analysis_sub) <- sub("data_use2.","",names(dat_for_analysis_sub)) 
+
+names(dat_for_analysis_sub)[1] <- "pub_work"
+names(dat_for_analysis_sub)[2] <- "female"
+names(dat_for_analysis_sub)[3:6] <- c("HS","SomeColl","College","AdvDeg")
+names(dat_for_analysis_sub)[7] <- "Age"
+
+names(dat_for_analysis_sub)
+
+```
+
+
+
+```{r}
+
+#training set and test data on new data set
+
+#initial outcome of checking for columns equal to zero resulted in 49
+
+
+require("standardize")
+set.seed(654321)
+NN <- length(dat_for_analysis_sub1$pub_work)
+
+```
+
+```{r}
+#restricting to use 10% as training data
+# shows False: 1655 and True: 200; 1655 observations do not meet the restrict condition while 200 does
+
+restrict_1 <- (runif(NN) < 0.1)
+summary(restrict_1)
+dat_train <- subset(dat_for_analysis_sub, restrict_1)
+dat_test <- subset(dat_for_analysis_sub, !restrict_1)
+
+```
+
+# again check this below, should be zero
+
+```{r}
+
+#outcome should be zero; initial outcomewithout filtering of checking for columns equal to zero resulted in 49 
+
+dat_train <- dat_train[, colSums(dat_train) != 0]
+sum( colSums(dat_train) == 0)
+```
+
+
+```{r eval=FALSE}
+# to not copy the dummies 145 times
+
+fmla_sobj <- reformulate( names(dat_for_analysis_sub[2:145]), response = "pub_work")
+
+sobj <- standardize(fmla_sobj, dat_train, family = binomial)
+
+s_dat_test <- predict(sobj, dat_test)
+```
+
+```{r eval=FALSE}
+
+model_lpm1 <- lm(sobj$formula, data = sobj$data)
+summary(model_lpm1)
+pred_vals_lpm <- predict(model_lpm1, s_dat_test)
+pred_model_lpm1 <- (pred_vals_lpm > mean(pred_vals_lpm))
+table(pred = pred_model_lpm1, true = dat_test$pub_work)
+```
+
+```{r}
+# logit 
+model_logit1 <- glm(sobj$formula, family = binomial, data = sobj$data)
+summary(model_logit1)
+pred_vals <- predict(model_logit1, s_dat_test, type = "response")
+pred_model_logit1 <- (pred_vals > 0.5)
+table(pred = pred_model_logit1, true = dat_test$pub_work)
+
+```
+
+
+
