@@ -1,0 +1,100 @@
+---
+title: "Lab 8"
+output: html_document
+date: "2023-11-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+```{r}
+# for now, really simplify the education dummy
+#adding college and advanced degree for people above a bachelors
+
+#includes everyone, male and female who goes to college
+
+data_use2$BA_plus <- data_use2$educ_college + data_use2$educ_advdeg
+
+
+#whole data set
+
+model_lpm_v1 <- lm(public_work_num ~ female + BA_plus + AGE + I(female*BA_plus) + I(AGE*female), data = data_use2)
+summary(model_lpm_v1)
+
+#turning the subsets for females and males into a logical argument
+
+data_use2_female <- subset(data_use2,as.logical(data_use2$female))
+data_use2_male <- subset(data_use2,!(data_use2$female))
+
+# now split into 2 parts
+model_lpm_v1f <- lm(public_work_num ~ BA_plus + AGE, data = data_use2_female)
+summary(model_lpm_v1f)
+model_lpm_v1m <- lm(public_work_num ~ BA_plus + AGE, data = data_use2_male)
+summary(model_lpm_v1m)
+
+```
+# Is it the same between the interaction terms? 
+explanatory variable is public work
+Compare the results of overall data set(with multiplications) vs the results of just the female specific model to our model
+The results of the coefficients were similar but the residuals were quite differen, the subset of only female was much smaller than the whole data set.
+
+#
+interpreting dummy variables and interactions
+when x variable goes up by 1, y goes up by 
+pluggig in a simple dummy so implicitly comparing with others
+
+# use full data set 
+
+```{r}
+model_lpm_v2f <- lm(public_work_num ~ educ_college + educ_advdeg + AGE, data = data_use2_female)
+summary(model_lpm_v2f)
+model_lpm_v2m <- lm(public_work_num ~ educ_college + educ_advdeg + AGE, data = data_use2_male)
+summary(model_lpm_v2m)
+```
+
+
+#
+forest
+tree setting up a number of decisions to classify creating branches
+
+```{r}
+require('randomForest')
+set.seed(54321)
+
+model_randFor <- randomForest(as.factor(pub_work) ~ ., data = sobj$data, importance=TRUE, proximity=TRUE)
+print(model_randFor)
+
+#confusion matrix
+
+#how well it tests on data
+round(importance(model_randFor),2)
+varImpPlot(model_randFor)
+# look at confusion matrix for this too
+
+pred_model1 <- predict(model_randFor,  s_dat_test)
+table(pred = pred_model1, true = dat_test$pub_work)
+```
+
+
+
+``` {r}
+require(e1071)
+# tuned_parameters <- tune.svm(as.factor(pub_work) ~ ., data = sobj$data, gamma = 10^(-3:0), cost = 10^(-2:2)) 
+# summary(tuned_parameters)
+# figure best parameters and input into next
+svm.model <- svm(as.factor(pub_work) ~ ., data = sobj$data, cost = 1, gamma = 0.1)
+svm.pred <- predict(svm.model, s_dat_test)
+table(pred = svm.pred, true = dat_test$pub_work)
+```
+
+
+When you summarize, you should be able to explain which models predict best (noting if there is a tradeoff of false positive vs false negative) and if there are certain explanatory variables that are consistently more or less useful. Also try other lists of explanatory variables.
+
+Explain carefully about what is the marginal product of each of these methods. Old-fashioned OLS and logit give some predictions – are these other methods better overall or in particular cases? Do they tend to make the same sort of errors or different ones? (If different then perhaps you can create an ensemble of models?)
+
+
